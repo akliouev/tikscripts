@@ -1,0 +1,48 @@
+# Script creates (or removes) a static route to the freshly assigned gateway and a given routing tag and a /32 route to an anchor host
+# Usefull for multy-ISP scenarios that call for load-balancing, failover and recurcive routing
+# Arguments to pass
+#:local rmark
+#:local gateaway
+#:local bound
+#:local anchor
+#:local distance
+
+:local count [/ip route print count-only where comment="route to $rmark"]
+:local acount [/ip route print count-only where comment="anchor $anchor via $rmark"]
+:log info "DHCPclient-anchor lease bound=$bound rmark=$rmark route_$rmark $gateway anchor $anchor distance $distance"
+
+:if ($bound=1) do={
+    :if ($count = 0) do={
+        /ip route add gateway=$gateway comment="route to $rmark" routing-mark="route_$rmark"
+    } else={
+       :if ($count = 1) do={
+              :local test [/ip route find where comment="route to $rmark"]
+              :if ([/ip route get $test gateway] != $gateway) do={
+                   /ip route set $test gateway=$gateway
+               }
+        } else={
+            :error "Multiple routes found"
+        }
+    }
+    :log info "main route added. adding anchor $acount"
+    :if ($acount = 0) do={
+        :log info "no anchors found. adding"
+        /ip route add dst-address=$anchor gateway=$gateway distance=$distance comment="anchor $anchor via $rmark" scope=10
+        :log info "added anhor $anchor via $gateway with distance $distance"
+    } else={
+        :if ($acount = 1) do={
+              :local test [/ip route find where comment="anchor $anchor via $rmark"]
+              :if ([/ip route get $test gateway] != $gateway) do={
+                  /ip route set $test gateway=$gateway
+              }
+        } else={
+            :log info  "Multiple anchor routes found. removing"
+            /ip route remove [find comment="anchor $anchor via $rmark"]
+            /ip route add dst-address=$anchor gateway=$gateway distance=$distance comment="anchor $anchor via $rmark" scope=10
+        }
+    }
+    :log info "boud complete"
+} else={
+    /ip route remove [find comment="route to $rmark"]
+    /ip route remove [find comment="anchor $anchor via $rmark"]
+}
