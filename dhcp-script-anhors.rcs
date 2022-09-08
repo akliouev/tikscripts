@@ -6,6 +6,15 @@
 #:local bound
 #:local anchor
 #:local distance
+#
+# Script invocation from dhcp-client script="" : 
+#{
+#: log error "DHCP lease script $bound $interface"
+#  :local localScript [:parse [/system script get dhcp-client-anchors source]]
+#  #:log error "DHCP lease script comliled source"
+#  :local anchors {{"1.1.1.1/32";"2"}; {"8.8.8.8/32";"3"}};
+#  $localScript rmark="Beeline" bound=$bound gateway=$"gateway-address" anchors=$anchors
+#}
 
 :local count [/ip route print count-only where comment="route to $rmark"]
 :local acount [/ip route print count-only where comment="anchor $anchor via $rmark"]
